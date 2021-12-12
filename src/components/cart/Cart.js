@@ -1,10 +1,16 @@
 import classes from './Cart.module.css'
 import Modal from '../ui/Modal'
-import { useContext } from 'react';
+import { useContext, useState } from 'react';
 import CartContext from '../../store/cart-context'
 import CartItem from './CartItem'
+import Checkout from './Checkout'
+import { Fragment } from 'react'
 
 const Cart = (props) => {
+
+    const [isCheckout, setIsCheckout] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [didSubmit, setDidSubmit] = useState(false);
     const cartCtx = useContext(CartContext)
     const totalAmount = `$${cartCtx.totalAmount.toFixed(2)}`
     const hasItems = cartCtx.items.length > 0
@@ -22,17 +28,69 @@ const Cart = (props) => {
         ))}
     </ul>
 
-    return (
-        <Modal onClose={props.onClose}>
+    const orderHandler = () => {
+        setIsCheckout(true)
+    }
+
+    const submitOrderHandler = async (userData) => {
+        setIsSubmitting(true)
+        try {
+            await fetch('https://react-demo-58101-default-rtdb.asia-southeast1.firebasedatabase.app/orders.json', {
+                method: 'POST',
+                body: JSON.stringify({
+                    user: userData,
+                    orderdItems: cartCtx.items
+                })
+            });
+            setDidSubmit(true)
+            cartCtx.clearCart()
+        } catch (err) {
+            setDidSubmit(false)
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
+    const modalActions = isCheckout ?
+        (
+            <Checkout onCancel={props.onClose} onConfirm={submitOrderHandler} />
+        ) :
+        (
+            <div className={classes.actions}>
+                <button className={classes['button--alt']} onClick={props.onClose}>Close</button>
+                {hasItems && <button className={classes.button} onClick={orderHandler}>Order</button>}
+            </div>
+        )
+
+    const cardModalContent = (
+        <Fragment>
             {cartItems}
             <div className={classes.total}>
                 <span>Total Amount</span>
                 <span>{totalAmount}</span>
             </div>
+            {modalActions}
+        </Fragment>
+    )
+
+    const isSubmittingModalContent = <h3>Sending order data...</h3>
+
+    const didSubmitModalConent = (
+        <Fragment>
+            <h3>Successfully sent the order!</h3>
             <div className={classes.actions}>
                 <button className={classes['button--alt']} onClick={props.onClose}>Close</button>
-                {hasItems && <button className={classes.button}>Order</button>}
             </div>
+        </Fragment>
+    )
+
+    const submitError = <h3>Could not send your order!</h3>
+
+    return (
+        <Modal onClose={props.onClose}>
+            {!isSubmitting && !didSubmit && cardModalContent}
+            {isSubmitting && isSubmittingModalContent}
+            {!isSubmitting && didSubmit && didSubmitModalConent}
         </Modal>
     );
 };
