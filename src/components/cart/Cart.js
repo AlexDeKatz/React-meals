@@ -34,20 +34,22 @@ const Cart = (props) => {
 
     const submitOrderHandler = async (userData) => {
         setIsSubmitting(true)
-        try {
-            await fetch('https://react-demo-58101-default-rtdb.asia-southeast1.firebasedatabase.app/orders.json', {
-                method: 'POST',
-                body: JSON.stringify({
-                    user: userData,
-                    orderdItems: cartCtx.items
-                })
-            });
+        const response = await fetch('https://react-demo-58101-default-rtdb.asia-southeast1.firebasedatabase.app/orders.json', {
+            method: 'POST',
+            body: JSON.stringify({
+                user: userData,
+                orderdItems: cartCtx.items
+            })
+        });
+        if (response.ok) {
+            console.log("Passed")
             setDidSubmit(true)
-            cartCtx.clearCart()
-        } catch (err) {
-            setDidSubmit(false)
-        } finally {
             setIsSubmitting(false)
+            cartCtx.clearCart()
+        } else {
+            console.log("Err: ", response.statusText)
+            setDidSubmit(true)
+            setIsSubmitting(true)
         }
     }
 
@@ -84,13 +86,21 @@ const Cart = (props) => {
         </Fragment>
     )
 
-    const submitError = <h3>Could not send your order!</h3>
+    const submitErrorModalContent = (
+        <Fragment>
+            <h3>Could not send your order!</h3>
+            <div className={classes.actions}>
+                <button className={classes['button--alt']} onClick={props.onClose}>Close</button>
+            </div>
+        </Fragment>
+    )
 
     return (
         <Modal onClose={props.onClose}>
             {!isSubmitting && !didSubmit && cardModalContent}
-            {isSubmitting && isSubmittingModalContent}
+            {isSubmitting && !didSubmit && isSubmittingModalContent}
             {!isSubmitting && didSubmit && didSubmitModalConent}
+            {isSubmitting && didSubmit && submitErrorModalContent}
         </Modal>
     );
 };
